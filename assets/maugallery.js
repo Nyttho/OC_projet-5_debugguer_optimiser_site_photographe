@@ -1,8 +1,11 @@
+//Enveloppe tout le plugin dans une fonction anonyme pour assurer que le plugin utilise la version jQuery passé en argument($)
 (function($) {
+  
   $.fn.mauGallery = function(options) {
     var options = $.extend($.fn.mauGallery.defaults, options);
     var tagsCollection = [];
     return this.each(function() {
+      //création de la structure de la galerie, crée un conteneur de rangée pour les images s'il n'existe pas déjà
       $.fn.mauGallery.methods.createRowWrapper($(this));
       if (options.lightBox) {
         $.fn.mauGallery.methods.createLightBox(
@@ -14,10 +17,14 @@
       $.fn.mauGallery.listeners(options);
 
       $(this)
+      //les images de la galerie sont parcourues 
         .children(".gallery-item")
         .each(function(index) {
+          //rend les images responsives
           $.fn.mauGallery.methods.responsiveImageItem($(this));
+          //déplacer dans la rangée
           $.fn.mauGallery.methods.moveItemInRowWrapper($(this));
+          //déplacer des les colonnes en fonction des options définies
           $.fn.mauGallery.methods.wrapItemInColumn($(this), options.columns);
           var theTag = $(this).data("gallery-tag");
           if (
@@ -28,6 +35,7 @@
             tagsCollection.push(theTag);
           }
         });
+          //si showTags true, alors on affiche les tags sous forme de liens, la position est determinée par l'option tagsPosition
 
       if (options.showTags) {
         $.fn.mauGallery.methods.showItemTags(
@@ -36,10 +44,11 @@
           tagsCollection
         );
       }
-
+      //la galerie est affichée
       $(this).fadeIn(500);
     });
   };
+  //les options par défauts
   $.fn.mauGallery.defaults = {
     columns: 3,
     lightBox: true,
@@ -65,6 +74,7 @@
       $.fn.mauGallery.methods.nextImage(options.lightboxId)
     );
   };
+  //les fonctions auxiliaires
   $.fn.mauGallery.methods = {
     createRowWrapper(element) {
       if (
@@ -110,7 +120,7 @@
     },
     responsiveImageItem(element) {
       if (element.prop("tagName") === "IMG") {
-        element.addClass("img-fluid");
+        element.addClass("img-fluid gallery-image");
       }
     },
     openLightBox(element, lightboxId) {
@@ -119,15 +129,11 @@
         .attr("src", element.attr("src"));
       $(`#${lightboxId}`).modal("toggle");
     },
-    prevImage() {
-      let activeImage = null;
-      $("img.gallery-item").each(function() {
-        if ($(this).attr("src") === $(".lightboxImage").attr("src")) {
-          activeImage = $(this);
-        }
-      });
+    prevImage(lightboxId) {
+      let activeImage = $(".lightboxImage");
       let activeTag = $(".tags-bar span.active-tag").data("images-toggle");
       let imagesCollection = [];
+    
       if (activeTag === "all") {
         $(".item-column").each(function() {
           if ($(this).children("img").length) {
@@ -145,28 +151,22 @@
           }
         });
       }
-      let index = 0,
-        next = null;
-
-      $(imagesCollection).each(function(i) {
-        if ($(activeImage).attr("src") === $(this).attr("src")) {
-          index = i ;
-        }
+    
+      let currentIndex = imagesCollection.findIndex(function(img) {
+        return img.attr("src") === activeImage.attr("src");
       });
-      next =
-        imagesCollection[index] ||
-        imagesCollection[imagesCollection.length - 1];
-      $(".lightboxImage").attr("src", $(next).attr("src"));
+    
+      let prevIndex = (currentIndex - 1 + imagesCollection.length) % imagesCollection.length;
+      let prevImage = imagesCollection[prevIndex];
+      
+      activeImage.attr("src", prevImage.attr("src"));
     },
-    nextImage() {
-      let activeImage = null;
-      $("img.gallery-item").each(function() {
-        if ($(this).attr("src") === $(".lightboxImage").attr("src")) {
-          activeImage = $(this);
-        }
-      });
+    
+    nextImage(lightboxId) {
+      let activeImage = $(".lightboxImage");
       let activeTag = $(".tags-bar span.active-tag").data("images-toggle");
       let imagesCollection = [];
+    
       if (activeTag === "all") {
         $(".item-column").each(function() {
           if ($(this).children("img").length) {
@@ -184,17 +184,17 @@
           }
         });
       }
-      let index = 0,
-        next = null;
-
-      $(imagesCollection).each(function(i) {
-        if ($(activeImage).attr("src") === $(this).attr("src")) {
-          index = i;
-        }
+    
+      let currentIndex = imagesCollection.findIndex(function(img) {
+        return img.attr("src") === activeImage.attr("src");
       });
-      next = imagesCollection[index] || imagesCollection[0];
-      $(".lightboxImage").attr("src", $(next).attr("src"));
+    
+      let nextIndex = (currentIndex + 1) % imagesCollection.length;
+      let nextImage = imagesCollection[nextIndex];
+      
+      activeImage.attr("src", nextImage.attr("src"));
     },
+    
     createLightBox(gallery, lightboxId, navigation) {
       gallery.append(`<div class="modal fade" id="${
         lightboxId ? lightboxId : "galleryLightbox"
@@ -239,8 +239,9 @@
       if ($(this).hasClass("active-tag")) {
         return;
       }
+      //gestion style filtre actif
       $(".active-tag").removeClass("active active-tag");
-      $(this).addClass("active-tag");
+      $(this).addClass("active active-tag");
 
       var tag = $(this).data("images-toggle");
 
